@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Historique</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 500px; margin: 50px auto; }
+        h1 { color: #2d3748; text-align: center; }
+        ul { list-style: none; padding: 0; }
+        li { background: white; padding: 15px; margin: 4px 0; border-radius: 5px; font-size: 16px; display: flex; align-items: center; justify-content: space-between; }
+        .btn-rajouter { padding: 5px 10px; background-color: #48bb78; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .categorie-titre { font-weight: bold; font-size: 15px; color: #2d3748; margin: 15px 0 5px; padding: 5px 10px; background: #e2e8f0; border-radius: 5px; }
+        .retour { display: block; text-align: center; margin-top: 20px; color: #4299e1; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>📋 Historique des courses</h1>
+    
+    {% if articles %}
+        {% set categories = ['Fruits et légumes', 'Viandes et poissons', 'Produits laitiers', 'Épicerie', 'Boissons', 'Hygiène', 'Autre'] %}
+        {% set emojis = {'Fruits et légumes': '🥦', 'Viandes et poissons': '🥩', 'Produits laitiers': '🥛', 'Épicerie': '🥫', 'Boissons': '🥤', 'Hygiène': '🧴', 'Autre': '📦'} %}
+
+        {% for categorie in categories %}
+            {% set articles_categorie = articles | selectattr('categorie', 'equalto', categorie) | list %}
+            {% if articles_categorie %}
+                <div class="categorie-titre">{{ emojis[categorie] }} {{ categorie }}</div>
+                <ul>
+                {% for article in articles_categorie %}
+                <li>
+                    <span>{{ article.quantite }} x {{ article.article }}</span>
+                    <form method="POST" action="/liste/{{ type_liste }}/ajouter">
+                        <input type="hidden" name="article" value="{{ article.article }}">
+                        <input type="hidden" name="quantite" value="{{ article.quantite }}">
+                        <input type="hidden" name="categorie" value="{{ article.categorie }}">
+                        <button class="btn-rajouter" type="submit">+ Rajouter</button>
+                    </form>
+                </li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <p style="text-align:center; color:#888;">Aucun historique pour le moment.</p>
+    {% endif %}
+    
+    <a href="/liste/{{ type_liste }}" class="retour">← Retour à la liste</a>
+</body>
+</html>

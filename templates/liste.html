@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Liste de courses</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 500px; margin: 50px auto; }
+        h1 { color: #2d3748; text-align: center; }
+        input[type="text"] { width: 60%; padding: 10px; font-size: 16px; border: none; border-radius: 5px; }
+        input[type="text"].quantite { width: 15%; }
+        select { padding: 10px; border: none; border-radius: 5px; margin: 5px 0; }
+        .btn-ajouter { padding: 10px 20px; background-color: #48bb78; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        .btn-supprimer { padding: 5px 10px; background-color: #fc8181; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        ul { list-style: none; padding: 0; }
+        li { background: white; padding: 15px; margin: 4px 0; border-radius: 5px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+        li.coche { opacity: 0.5; text-decoration: line-through; }
+        .checkbox { width: 20px; height: 20px; cursor: pointer; }
+        .article-text { flex: 1; }
+        .categorie-titre { font-weight: bold; font-size: 15px; color: #2d3748; margin: 15px 0 5px; padding: 5px 10px; background: #e2e8f0; border-radius: 5px; }
+        .retour { display: block; text-align: center; margin-top: 20px; color: #4299e1; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>{% if type_liste == 'personnelle' %}🔒 Ma liste personnelle{% else %}👨‍👩‍👧‍👦 Liste commune{% endif %}</h1>
+    
+    <form method="POST" action="/liste/{{ type_liste }}/ajouter">
+        <input type="text" name="article" placeholder="Article...">
+        <input type="text" name="quantite" class="quantite" placeholder="Qté...">
+        <select name="categorie">
+            <option value="Fruits et légumes">🥦 Fruits et légumes</option>
+            <option value="Viandes et poissons">🥩 Viandes et poissons</option>
+            <option value="Produits laitiers">🥛 Produits laitiers</option>
+            <option value="Épicerie">🥫 Épicerie</option>
+            <option value="Boissons">🥤 Boissons</option>
+            <option value="Hygiène">🧴 Hygiène</option>
+            <option value="Autre">📦 Autre</option>
+        </select>
+        <button class="btn-ajouter" type="submit">Ajouter</button>
+    </form>
+
+    {% set categories = ['Fruits et légumes', 'Viandes et poissons', 'Produits laitiers', 'Épicerie', 'Boissons', 'Hygiène', 'Autre'] %}
+    {% set emojis = {'Fruits et légumes': '🥦', 'Viandes et poissons': '🥩', 'Produits laitiers': '🥛', 'Épicerie': '🥫', 'Boissons': '🥤', 'Hygiène': '🧴', 'Autre': '📦'} %}
+
+    {% for categorie in categories %}
+        {% set articles_categorie = courses | selectattr('categorie', 'equalto', categorie) | list %}
+        {% if articles_categorie %}
+            <div class="categorie-titre">{{ emojis[categorie] }} {{ categorie }}</div>
+            <ul>
+            {% for course in articles_categorie %}
+            <li class="{% if course.coche %}coche{% endif %}">
+                <form method="POST" action="/liste/{{ type_liste }}/cocher">
+                    <input type="hidden" name="course_id" value="{{ course.id }}">
+                    <input type="hidden" name="coche" value="{{ course.coche }}">
+                    <input type="checkbox" class="checkbox" {% if course.coche %}checked{% endif %} onChange="this.form.submit()">
+                </form>
+                <span class="article-text">{{ course.quantite }} x {{ course.article }}</span>
+                <form method="POST" action="/liste/{{ type_liste }}/modifier" style="display:inline;">
+                    <input type="hidden" name="course_id" value="{{ course.id }}">
+                    <input type="text" name="quantite" value="{{ course.quantite }}" style="width:40px; padding:3px; border:1px solid #ddd; border-radius:3px;">
+                    <select name="categorie" style="padding:3px; border:1px solid #ddd; border-radius:3px; font-size:12px;">
+                        <option {% if course.categorie == 'Fruits et légumes' %}selected{% endif %} value="Fruits et légumes">🥦</option>
+                        <option {% if course.categorie == 'Viandes et poissons' %}selected{% endif %} value="Viandes et poissons">🥩</option>
+                        <option {% if course.categorie == 'Produits laitiers' %}selected{% endif %} value="Produits laitiers">🥛</option>
+                        <option {% if course.categorie == 'Épicerie' %}selected{% endif %} value="Épicerie">🥫</option>
+                        <option {% if course.categorie == 'Boissons' %}selected{% endif %} value="Boissons">🥤</option>
+                        <option {% if course.categorie == 'Hygiène' %}selected{% endif %} value="Hygiène">🧴</option>
+                        <option {% if course.categorie == 'Autre' %}selected{% endif %} value="Autre">📦</option>
+                    </select>
+                    <button type="submit" style="padding:3px 8px; background:#48bb78; color:white; border:none; border-radius:3px; cursor:pointer;">✅</button>
+                </form>
+                <form method="POST" action="/liste/{{ type_liste }}/supprimer" style="display:inline;">
+                    <input type="hidden" name="course_id" value="{{ course.id }}">
+                    <button class="btn-supprimer" type="submit">🗑</button>
+                </form>
+            </li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endfor %}
+ <div style="text-align:center; margin-top:20px; display:flex; gap:10px; justify-content:center;">
+    <form method="POST" action="/liste/{{ type_liste }}/vider">
+        <button type="submit" style="padding:10px 20px; background:#fc8181; color:white; border:none; border-radius:5px; cursor:pointer;">🗑 Vider la liste</button>
+    </form>
+    <a href="/historique/{{ type_liste }}" style="padding:10px 20px; background:#4299e1; color:white; border-radius:5px; text-decoration:none;">📋 Historique</a>
+</div>   
+    
+    <a href="/" class="retour">← Retour à l'accueil</a>
+</body>
+</html>

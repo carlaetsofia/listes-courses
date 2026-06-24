@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Liste de courses</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 500px; margin: 50px auto; }
+        h1 { color: #2d3748; text-align: center; }
+        input { width: 70%; padding: 10px; font-size: 16px; border: none; border-radius: 5px; }
+        .btn-ajouter { padding: 10px 20px; background-color: #48bb78; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        .btn-supprimer { padding: 5px 10px; background-color: #fc8181; color: white; border: none; border-radius: 5px; cursor: pointer; float: right; }
+        ul { list-style: none; padding: 0; }
+        li { background: white; padding: 15px; margin: 8px 0; border-radius: 5px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🛒 Ma liste de courses</h1>
+    
+    <form method="POST" action="/ajouter">
+        <input type="text" name="article" placeholder="Ajouter un article...">
+        <button class="btn-ajouter" type="submit">Ajouter</button>
+    </form>
+
+    <ul>
+        {% for course in courses %}
+        <li>
+            🛒 {{ course }}
+            <form method="POST" action="/supprimer" style="display:inline;">
+                <input type="hidden" name="article" value="{{ course }}">
+                <button class="btn-supprimer" type="submit">🗑</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

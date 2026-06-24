@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mes recettes</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 500px; margin: 50px auto; }
+        h1 { color: #2d3748; text-align: center; }
+        input[type="text"] { width: 70%; padding: 10px; font-size: 16px; border: none; border-radius: 5px; }
+        .btn-ajouter { padding: 10px 20px; background-color: #48bb78; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        .btn-supprimer { padding: 5px 10px; background-color: #fc8181; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-voir { padding: 5px 10px; background-color: #4299e1; color: white; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; }
+        ul { list-style: none; padding: 0; }
+        li { background: white; padding: 15px; margin: 8px 0; border-radius: 5px; font-size: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .retour { display: block; text-align: center; margin-top: 20px; color: #4299e1; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>🍽️ Mes recettes</h1>
+
+    <form method="POST" action="/recettes/ajouter">
+        <input type="text" name="nom" placeholder="Nom de la recette...">
+        <button class="btn-ajouter" type="submit">Ajouter</button>
+    </form>
+
+    <ul>
+        {% for recette in recettes %}
+        <li>
+            <span>🍝 {{ recette.nom }}</span>
+            <div style="display:flex; gap:5px;">
+                <a href="/recettes/{{ recette.id }}" class="btn-voir">👁 Voir</a>
+                <form method="POST" action="/recettes/{{ recette.id }}/supprimer">
+                    <button class="btn-supprimer" type="submit">🗑</button>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <a href="/" class="retour">← Retour à l'accueil</a>
+</body>
+</html>

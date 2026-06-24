@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ recette.nom }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 500px; margin: 50px auto; }
+        h1 { color: #2d3748; text-align: center; }
+        input[type="text"] { width: 50%; padding: 8px; font-size: 14px; border: none; border-radius: 5px; }
+        input[type="text"].quantite { width: 15%; }
+        .btn-ajouter { padding: 8px 15px; background-color: #48bb78; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-supprimer { padding: 5px 10px; background-color: #fc8181; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-panier { padding: 5px 8px; background-color: #48bb78; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; }
+        .btn-panier-commune { background-color: #4299e1; }
+        ul { list-style: none; padding: 0; }
+        li { background: white; padding: 12px 15px; margin: 4px 0; border-radius: 5px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+        .article-text { flex: 1; }
+        .retour { display: block; text-align: center; margin-top: 20px; color: #4299e1; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>🍝 {{ recette.nom }}</h1>
+
+    <form method="POST" action="/recettes/{{ recette.id }}/ajouter_ingredient">
+        <input type="text" name="article" placeholder="Ingrédient...">
+        <input type="text" name="quantite" class="quantite" placeholder="Qté...">
+        <button class="btn-ajouter" type="submit">Ajouter</button>
+    </form>
+
+    <ul>
+        {% for ingredient in ingredients %}
+        <li>
+            <span class="article-text">{{ ingredient.quantite }} x {{ ingredient.article }}</span>
+            <form method="POST" action="/recettes/{{ recette.id }}/modifier_ingredient" style="display:inline;">
+                <input type="hidden" name="ingredient_id" value="{{ ingredient.id }}">
+                <input type="text" name="quantite" value="{{ ingredient.quantite }}" style="width:40px; padding:3px; border:1px solid #ddd; border-radius:3px;">
+                <button type="submit" style="padding:3px 8px; background:#48bb78; color:white; border:none; border-radius:3px; cursor:pointer;">✅</button>
+            </form>
+            <form method="POST" action="/recettes/{{ recette.id }}/ingredient_vers_liste" style="display:inline;">
+                <input type="hidden" name="ingredient_id" value="{{ ingredient.id }}">
+                <input type="hidden" name="type_liste" value="personnelle">
+                <button class="btn-panier" type="submit">🛒 Perso</button>
+            </form>
+            <form method="POST" action="/recettes/{{ recette.id }}/ingredient_vers_liste" style="display:inline;">
+                <input type="hidden" name="ingredient_id" value="{{ ingredient.id }}">
+                <input type="hidden" name="type_liste" value="commune">
+                <button class="btn-panier btn-panier-commune" type="submit">🛒 Commune</button>
+            </form>
+            <form method="POST" action="/recettes/{{ recette.id }}/supprimer_ingredient" style="display:inline;">
+                <input type="hidden" name="ingredient_id" value="{{ ingredient.id }}">
+                <button class="btn-supprimer" type="submit">🗑</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <a href="/recettes" class="retour">← Retour aux recettes</a>
+</body>
+</html>

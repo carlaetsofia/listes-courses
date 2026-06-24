@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Planning des repas</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 600px; margin: 50px auto; }
+        h1 { color: #2d3748; text-align: center; }
+        .jour { background: white; border-radius: 10px; padding: 15px; margin: 10px 0; }
+        .jour h2 { color: #2d3748; font-size: 18px; margin: 0 0 10px; }
+        .repas { display: flex; gap: 10px; align-items: center; margin: 5px 0; }
+        .repas-label { width: 80px; font-weight: bold; color: #4299e1; }
+        select { padding: 8px; border: none; border-radius: 5px; background: #f0f4f8; flex: 1; }
+        .btn-sauvegarder { padding: 5px 10px; background-color: #48bb78; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-courses { display: block; width: 100%; padding: 15px; background-color: #48bb78; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 20px; text-align: center; text-decoration: none; }
+        .retour { display: block; text-align: center; margin-top: 20px; color: #4299e1; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>📅 Planning de la semaine</h1>
+
+    {% set jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'] %}
+    {% set repas_types = ['Midi', 'Soir'] %}
+
+    {% for jour in jours %}
+    <div class="jour">
+        <h2>{{ jour }}</h2>
+        {% for repas_type in repas_types %}
+            {% set cle = jour + '_' + repas_type %}
+            <div class="repas">
+                <span class="repas-label">{{ repas_type }}</span>
+                <form method="POST" action="/planning/sauvegarder" style="display:flex; gap:10px; flex:1;">
+                    <input type="hidden" name="jour" value="{{ jour }}">
+                    <input type="hidden" name="repas" value="{{ repas_type }}">
+                    <select name="recette_id">
+                        <option value="">-- Pas de recette --</option>
+                        {% for recette in recettes %}
+                        <option value="{{ recette.id }}" {% if planning.get(cle) == recette.id %}selected{% endif %}>{{ recette.nom }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn-sauvegarder" type="submit">✅</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+    <form method="POST" action="/planning/vers_liste">
+        <select name="type_liste" style="padding:10px; border:none; border-radius:5px; margin-top:10px; width:100%;">
+            <option value="personnelle">🔒 Ma liste personnelle</option>
+            <option value="commune">👨‍👩‍👧‍👦 Liste commune</option>
+        </select>
+        <button class="btn-courses" type="submit">🛒 Générer la liste de courses pour la semaine</button>
+    </form>
+
+    <a href="/" class="retour">← Retour à l'accueil</a>
+</body>
+</html>

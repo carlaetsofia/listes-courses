@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Messages</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 500px; margin: 50px auto; }
+        h1 { color: #2d3748; text-align: center; }
+        .message { background: white; padding: 12px 15px; margin: 8px 0; border-radius: 10px; }
+        .message.moi { background: #48bb78; color: white; margin-left: 50px; }
+        .message.autre { background: white; margin-right: 50px; }
+        .pseudo { font-weight: bold; font-size: 13px; margin-bottom: 4px; }
+        .moi .pseudo { color: rgba(255,255,255,0.8); }
+        .autre .pseudo { color: #4299e1; }
+        .date { font-size: 11px; color: #888; margin-top: 4px; }
+        .moi .date { color: rgba(255,255,255,0.7); }
+        .form-message { display: flex; gap: 10px; margin-top: 20px; }
+        input[type="text"] { flex: 1; padding: 10px; border: none; border-radius: 5px; font-size: 16px; }
+        .btn-envoyer { padding: 10px 20px; background-color: #48bb78; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .retour { display: block; text-align: center; margin-top: 20px; color: #4299e1; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>💬 Messages du foyer</h1>
+
+    {% for message in messages %}
+    <div class="message {% if message.utilisateur_id == utilisateur_id %}moi{% else %}autre{% endif %}">
+        <div class="pseudo">{{ message.pseudo }}</div>
+        <div>{{ message.contenu }}</div>
+        <div class="date">{{ message.date }}</div>
+    </div>
+    {% endfor %}
+
+    <form method="POST" action="/messages/envoyer" class="form-message">
+        <input type="text" name="contenu" placeholder="Écrire un message...">
+        <button class="btn-envoyer" type="submit">Envoyer</button>
+    </form>
+
+    <a href="/" class="retour">← Retour à l'accueil</a>
+</body>
+</html>

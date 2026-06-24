@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Accueil</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 500px; margin: 100px auto; text-align: center; }
+        h1 { color: #2d3748; }
+        .btn { display: inline-block; padding: 15px 30px; margin: 10px; border-radius: 5px; font-size: 16px; cursor: pointer; text-decoration: none; color: white; }
+        .btn-perso { background-color: #48bb78; }
+        .btn-commune { background-color: #4299e1; }
+        .btn-recettes { background-color: #ed8936; }
+        .btn-planning { background-color: #9f7aea; }
+        .btn-messages { background-color: #f6ad55; }
+        .deconnexion { color: #fc8181; margin-top: 30px; display: block; }
+    </style>
+</head>
+<body>
+    <h1>👋 Bonjour {{ pseudo }} !</h1>
+    <p>Quelle liste souhaitez-vous consulter ?</p>
+    
+    <a href="/liste/personnelle" class="btn btn-perso">🔒 Ma liste personnelle</a>
+    <a href="/liste/commune" class="btn btn-commune">👨‍👩‍👧‍👦 Liste commune</a>
+    <a href="/recettes" class="btn btn-recettes">🍽️ Mes recettes</a>
+    <a href="/planning" class="btn btn-planning">📅 Planning de la semaine</a>
+    <a href="/messages" class="btn btn-messages">💬 Messages du foyer</a>
+    
+    <a href="/deconnexion" class="deconnexion">Se déconnecter</a>
+</body>
+</html>
