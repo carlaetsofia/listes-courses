@@ -75,6 +75,8 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+init_db()
+
 @app.route("/")
 def accueil():
     if "utilisateur_id" not in session:
@@ -501,7 +503,7 @@ def quitter_foyer():
     conn.commit()
     conn.close()
     return redirect("/foyer")
-init_db()
+
 
 if __name__ == "__main__":
     app.run(debug=True)
