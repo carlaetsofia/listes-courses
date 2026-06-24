@@ -17,9 +17,36 @@
     {% if erreur %}<p class="erreur">{{ erreur }}</p>{% endif %}
     <form method="POST">
         <input type="text" name="pseudo" placeholder="Votre pseudo">
-        <input type="password" name="mot_de_passe" placeholder="Votre mot de passe">
+     <div style="position:relative;">
+    <input type="password" id="mot_de_passe" name="mot_de_passe" placeholder="Votre mot de passe" style="width:100%; padding:10px; margin:8px 0; font-size:16px; border:none; border-radius:5px; box-sizing:border-box;">
+    <span onclick="togglePassword('mot_de_passe', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer;">👁</span>
+</div>   
         <button type="submit">Se connecter</button>
     </form>
     <div class="lien"><a href="/inscription">Pas encore de compte ? S'inscrire</a></div>
+ <script>
+function togglePassword(id, icon) {
+    var input = document.getElementById(id);
+    if (input.type === "password") {
+        input.type = "text";
+        icon.textContent = "🙈";
+    } else {
+        input.type = "password";
+        icon.textContent = "👁";
+    }
+}
+</script> 
+<script>
+function togglePassword(id, icon) {
+    var input = document.getElementById(id);
+    if (input.type === "password") {
+        input.type = "text";
+        icon.textContent = "🙈";
+    } else {
+        input.type = "password";
+        icon.textContent = "👁";
+    }
+}
+</script>  
 </body>
 </html>
