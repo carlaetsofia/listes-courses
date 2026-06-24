@@ -6,6 +6,69 @@ app = Flask(__name__)
 app.secret_key = "ma_cle_secrete_123"
 import os
 DB = os.path.join(os.path.dirname(__file__), "courses.db")
+def init_db():
+    conn = get_db()
+    conn.execute("""CREATE TABLE IF NOT EXISTS utilisateurs (
+        id INTEGER PRIMARY KEY,
+        pseudo TEXT UNIQUE NOT NULL,
+        mot_de_passe TEXT NOT NULL,
+        foyer_id INTEGER DEFAULT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS foyers (
+        id INTEGER PRIMARY KEY,
+        code TEXT UNIQUE NOT NULL,
+        nom TEXT,
+        createur_id INTEGER
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS courses (
+        id INTEGER PRIMARY KEY,
+        article TEXT NOT NULL,
+        quantite TEXT DEFAULT '1',
+        categorie TEXT DEFAULT 'Autre',
+        coche INTEGER DEFAULT 0,
+        utilisateur_id INTEGER,
+        type_liste TEXT NOT NULL,
+        foyer_id INTEGER DEFAULT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS historique (
+        id INTEGER PRIMARY KEY,
+        article TEXT NOT NULL,
+        categorie TEXT,
+        quantite TEXT,
+        utilisateur_id INTEGER,
+        type_liste TEXT,
+        date TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS recettes (
+        id INTEGER PRIMARY KEY,
+        nom TEXT NOT NULL,
+        utilisateur_id INTEGER
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS ingredients (
+        id INTEGER PRIMARY KEY,
+        recette_id INTEGER,
+        article TEXT NOT NULL,
+        quantite TEXT DEFAULT '1',
+        categorie TEXT DEFAULT 'Autre'
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS planning (
+        id INTEGER PRIMARY KEY,
+        jour TEXT NOT NULL,
+        repas TEXT NOT NULL,
+        recette_id INTEGER,
+        utilisateur_id INTEGER
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY,
+        contenu TEXT NOT NULL,
+        utilisateur_id INTEGER,
+        pseudo TEXT,
+        date TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+    conn.commit()
+    conn.close()
+
+init_db()
 
 def get_db():
     conn = sqlite3.connect(DB)
