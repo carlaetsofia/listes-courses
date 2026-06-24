@@ -4,7 +4,8 @@ import hashlib
 
 app = Flask(__name__)
 app.secret_key = "ma_cle_secrete_123"
-DB = "/Users/monamour/Documents/courses.db"
+import os
+DB = os.path.join(os.path.dirname(__file__), "courses.db")
 
 def get_db():
     conn = sqlite3.connect(DB)
@@ -41,9 +42,10 @@ def connexion():
         user = conn.execute("SELECT * FROM utilisateurs WHERE pseudo=? AND mot_de_passe=?", (pseudo, mot_de_passe)).fetchone()
         conn.close()
         if user:
-            session["utilisateur_id"] = user["id"]
-            session["pseudo"] = user["pseudo"]
-            return redirect("/")
+          session["utilisateur_id"] = user["id"]
+        session["pseudo"] = user["pseudo"]
+        session["foyer_id"] = user["foyer_id"]
+        return redirect("/")  
         return render_template("connexion.html", erreur="Pseudo ou mot de passe incorrect !")
     return render_template("connexion.html")
 
@@ -379,6 +381,63 @@ def envoyer_message():
         conn.commit()
         conn.close()
     return redirect("/messages")
+import random
+import string
+
+def generer_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+@app.route("/foyer")
+def foyer():
+    if "utilisateur_id" not in session:
+        return redirect("/connexion")
+    conn = get_db()
+    user = conn.execute("SELECT * FROM utilisateurs WHERE id=?", (session["utilisateur_id"],)).fetchone()
+    foyer = None
+    membres = []
+    if user["foyer_id"]:
+        foyer = conn.execute("SELECT * FROM foyers WHERE id=?", (user["foyer_id"],)).fetchone()
+        membres = conn.execute("SELECT * FROM utilisateurs WHERE foyer_id=?", (user["foyer_id"],)).fetchall()
+    conn.close()
+    return render_template("foyer.html", foyer=foyer, membres=membres)
+
+@app.route("/foyer/creer", methods=["POST"])
+def creer_foyer():
+    if "utilisateur_id" not in session:
+        return redirect("/connexion")
+    code = generer_code()
+    conn = get_db()
+    conn.execute("INSERT INTO foyers (code, createur_id) VALUES (?, ?)", (code, session["utilisateur_id"]))
+    foyer = conn.execute("SELECT * FROM foyers WHERE code=?", (code,)).fetchone()
+    conn.execute("UPDATE utilisateurs SET foyer_id=? WHERE id=?", (foyer["id"], session["utilisateur_id"]))
+    conn.commit()
+    conn.close()
+    return redirect("/foyer")
+
+@app.route("/foyer/rejoindre", methods=["POST"])
+def rejoindre_foyer():
+    if "utilisateur_id" not in session:
+        return redirect("/connexion")
+    code = request.form.get("code").upper()
+    conn = get_db()
+    foyer = conn.execute("SELECT * FROM foyers WHERE code=?", (code,)).fetchone()
+    if foyer:
+        conn.execute("UPDATE utilisateurs SET foyer_id=? WHERE id=?", (foyer["id"], session["utilisateur_id"]))
+        conn.commit()
+        conn.close()
+        return redirect("/foyer")
+    conn.close()
+    return render_template("foyer.html", foyer=None, membres=[], erreur="Code incorrect — vérifiez et réessayez !")
+
+@app.route("/foyer/quitter", methods=["POST"])
+def quitter_foyer():
+    if "utilisateur_id" not in session:
+        return redirect("/connexion")
+    conn = get_db()
+    conn.execute("UPDATE utilisateurs SET foyer_id=NULL WHERE id=?", (session["utilisateur_id"],))
+    conn.commit()
+    conn.close()
+    return redirect("/foyer")
 
 if __name__ == "__main__":
     app.run(debug=True)
