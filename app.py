@@ -68,7 +68,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-init_db()
+
 
 def get_db():
     conn = sqlite3.connect(DB)
@@ -501,6 +501,7 @@ def quitter_foyer():
     conn.commit()
     conn.close()
     return redirect("/foyer")
+init_db()
 
 if __name__ == "__main__":
     app.run(debug=True)
