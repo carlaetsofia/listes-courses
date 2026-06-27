@@ -525,7 +525,7 @@ def mot_de_passe_oublie():
                 html_content=f"<p>Cliquez sur ce lien pour réinitialiser votre mot de passe :</p><a href='{lien}'>{lien}</a>"
             )
             try:
-               sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
+                sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
                 sg.send(message)
             except Exception as e:
                 print(e)
