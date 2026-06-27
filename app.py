@@ -558,11 +558,14 @@ def reinitialiser(token):
 @app.route("/reset-db-secret-123")
 def reset_db():
     conn = get_db()
-    conn.execute("DROP TABLE IF EXISTS utilisateurs")
-    conn.commit()
-    init_db()
-    return "Base de données réinitialisée !"
-
+    conn.execute("""CREATE TABLE IF NOT EXISTS utilisateurs (
+    id INTEGER PRIMARY KEY,
+    pseudo TEXT UNIQUE NOT NULL,
+    mot_de_passe TEXT NOT NULL,
+    email TEXT DEFAULT NULL,
+    reset_token TEXT DEFAULT NULL,
+    foyer_id INTEGER DEFAULT NULL
+)""")
 
 if __name__ == "__main__":
     app.run(debug=True)
