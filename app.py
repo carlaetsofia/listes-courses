@@ -90,8 +90,8 @@ def accueil():
 def inscription():
     if request.method == "POST":
         email = request.form.get("email")
-pseudo = request.form.get("pseudo")
-mot_de_passe = hashlib.sha256(request.form.get("mot_de_passe").encode()).hexdigest()
+        pseudo = request.form.get("pseudo")
+        mot_de_passe = hashlib.sha256(request.form.get("mot_de_passe").encode()).hexdigest()
         try:
             conn = get_db()
             conn.execute("INSERT INTO utilisateurs (pseudo, mot_de_passe, email) VALUES (?, ?, ?)", (pseudo, mot_de_passe, email))
