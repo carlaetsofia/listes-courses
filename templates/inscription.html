@@ -16,6 +16,8 @@
     <h1>📝 Inscription</h1>
     {% if erreur %}<p class="erreur">{{ erreur }}</p>{% endif %}
     <form method="POST">
+        <input type="email" name="email" placeholder="Votre adresse email">
+    
         <input type="text" name="pseudo" placeholder="Choisissez un pseudo">
      <div style="position:relative;">
     <input type="password" id="mot_de_passe" name="mot_de_passe" placeholder="Votre mot de passe" style="width:100%; padding:10px; margin:8px 0; font-size:16px; border:none; border-radius:5px; box-sizing:border-box;">

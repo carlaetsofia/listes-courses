@@ -1,11 +1,14 @@
 from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import hashlib
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+import secrets
 
 app = Flask(__name__)
 app.secret_key = "ma_cle_secrete_123"
 import os
-DB = os.path.join(os.path.dirname(__file__), "courses.db")
+DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "courses.db")
 def init_db():
     conn = get_db()
     conn.execute("""CREATE TABLE IF NOT EXISTS utilisateurs (
@@ -86,11 +89,12 @@ def accueil():
 @app.route("/inscription", methods=["GET", "POST"])
 def inscription():
     if request.method == "POST":
-        pseudo = request.form.get("pseudo")
-        mot_de_passe = hashlib.sha256(request.form.get("mot_de_passe").encode()).hexdigest()
+        email = request.form.get("email")
+pseudo = request.form.get("pseudo")
+mot_de_passe = hashlib.sha256(request.form.get("mot_de_passe").encode()).hexdigest()
         try:
             conn = get_db()
-            conn.execute("INSERT INTO utilisateurs (pseudo, mot_de_passe) VALUES (?, ?)", (pseudo, mot_de_passe))
+            conn.execute("INSERT INTO utilisateurs (pseudo, mot_de_passe, email) VALUES (?, ?, ?)", (pseudo, mot_de_passe, email))
             conn.commit()
             conn.close()
             return redirect("/connexion")
@@ -503,6 +507,54 @@ def quitter_foyer():
     conn.commit()
     conn.close()
     return redirect("/foyer")
+@app.route("/mot_de_passe_oublie", methods=["GET", "POST"])
+def mot_de_passe_oublie():
+    if request.method == "POST":
+        email = request.form.get("email")
+        conn = get_db()
+        user = conn.execute("SELECT * FROM utilisateurs WHERE email=?", (email,)).fetchone()
+        if user:
+            token = secrets.token_urlsafe(32)
+            conn.execute("UPDATE utilisateurs SET reset_token=? WHERE email=?", (token, email))
+            conn.commit()
+            lien = f"https://listes-courses.onrender.com/reinitialiser/{token}"
+            message = Mail(
+               
+                from_email=os.environ.get("SENDGRID_FROM_EMAIL"),                to_emails=email,
+                subject="Réinitialisation de votre mot de passe",
+                html_content=f"<p>Cliquez sur ce lien pour réinitialiser votre mot de passe :</p><a href='{lien}'>{lien}</a>"
+            )
+            try:
+               sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
+                sg.send(message)
+            except Exception as e:
+                print(e)
+            conn.close()
+            return render_template("mot_de_passe_oublie.html", message="Un email vous a été envoyé !")
+        conn.close()
+        return render_template("mot_de_passe_oublie.html", erreur="Aucun compte trouvé avec cet email !")
+    return render_template("mot_de_passe_oublie.html")
+
+@app.route("/reinitialiser/<token>", methods=["GET", "POST"])
+def reinitialiser(token):
+    conn = get_db()
+    user = conn.execute("SELECT * FROM utilisateurs WHERE reset_token=?", (token,)).fetchone()
+    if not user:
+        conn.close()
+        return redirect("/connexion")
+    if request.method == "POST":
+        mot_de_passe = request.form.get("mot_de_passe")
+        mot_de_passe2 = request.form.get("mot_de_passe2")
+        if mot_de_passe != mot_de_passe2:
+            conn.close()
+            return render_template("nouveau_mot_de_passe.html", erreur="Les mots de passe ne correspondent pas !")
+        nouveau_mdp = hashlib.sha256(mot_de_passe.encode()).hexdigest()
+        conn.execute("UPDATE utilisateurs SET mot_de_passe=?, reset_token=NULL WHERE reset_token=?", (nouveau_mdp, token))
+        conn.commit()
+        conn.close()
+        return redirect("/connexion")
+    conn.close()
+    return render_template("nouveau_mot_de_passe.html")
 
 
 if __name__ == "__main__":

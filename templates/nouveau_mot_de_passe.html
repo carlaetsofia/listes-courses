@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nouveau mot de passe</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 400px; margin: 100px auto; }
+        h1 { color: #2d3748; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 8px 0; font-size: 16px; border: none; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #48bb78; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        .erreur { color: #fc8181; text-align: center; }
+        .lien { text-align: center; margin-top: 15px; }
+        a { color: #48bb78; }
+    </style>
+</head>
+<body>
+    <h1>🔑 Nouveau mot de passe</h1>
+    {% if erreur %}<p class="erreur">{{ erreur }}</p>{% endif %}
+    <form method="POST">
+        <div style="position:relative;">
+            <input type="password" id="mot_de_passe" name="mot_de_passe" placeholder="Nouveau mot de passe">
+            <span onclick="togglePassword('mot_de_passe', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer;">👁</span>
+        </div>
+        <div style="position:relative;">
+            <input type="password" id="mot_de_passe2" name="mot_de_passe2" placeholder="Confirmez le mot de passe">
+            <span onclick="togglePassword('mot_de_passe2', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer;">👁</span>
+        </div>
+        <button type="submit">Changer le mot de passe</button>
+    </form>
+    <script>
+    function togglePassword(id, icon) {
+        var input = document.getElementById(id);
+        if (input.type === "password") {
+            input.type = "text";
+            icon.textContent = "🙈";
+        } else {
+            input.type = "password";
+            icon.textContent = "👁";
+        }
+    }
+    </script>
+    <div class="lien"><a href="/connexion">← Retour à la connexion</a></div>
+</body>
+</html>
