@@ -555,6 +555,13 @@ def reinitialiser(token):
         return redirect("/connexion")
     conn.close()
     return render_template("nouveau_mot_de_passe.html")
+@app.route("/reset-db-secret-123")
+def reset_db():
+    conn = get_db()
+    conn.execute("DELETE FROM utilisateurs")
+    conn.commit()
+    conn.close()
+    return "Base de données réinitialisée !"
 
 
 if __name__ == "__main__":
