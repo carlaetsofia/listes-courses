@@ -98,8 +98,8 @@ def inscription():
             conn.commit()
             conn.close()
             return redirect("/connexion")
-        except:
-            return render_template("inscription.html", erreur="Ce pseudo existe déjà !")
+        except Exception as e:
+            return render_template("inscription.html", erreur=f"Erreur: {str(e)}")
     return render_template("inscription.html")
 
 @app.route("/connexion", methods=["GET", "POST"])
