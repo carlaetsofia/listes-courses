@@ -559,10 +559,17 @@ def reinitialiser(token):
 def reset_db():
     conn = get_db()
     conn.execute("DROP TABLE IF EXISTS utilisateurs")
+    conn.execute("DROP TABLE IF EXISTS courses")
+    conn.execute("DROP TABLE IF EXISTS historique")
+    conn.execute("DROP TABLE IF EXISTS foyers")
+    conn.execute("DROP TABLE IF EXISTS recettes")
+    conn.execute("DROP TABLE IF EXISTS ingredients")
+    conn.execute("DROP TABLE IF EXISTS planning")
+    conn.execute("DROP TABLE IF EXISTS messages")
     conn.commit()
     conn.close()
     init_db()
     return "Base de données réinitialisée !"
-
+    
 if __name__ == "__main__":
     app.run(debug=True)
