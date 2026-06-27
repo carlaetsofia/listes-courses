@@ -112,9 +112,9 @@ def connexion():
         conn.close()
         if user:
           session["utilisateur_id"] = user["id"]
-        session["pseudo"] = user["pseudo"]
-        session["foyer_id"] = user["foyer_id"]
-        return redirect("/")  
+          session["pseudo"] = user["pseudo"]
+          session["foyer_id"] = user["foyer_id"]
+          return redirect("/")  
         return render_template("connexion.html", erreur="Pseudo ou mot de passe incorrect !")
     return render_template("connexion.html")
 
