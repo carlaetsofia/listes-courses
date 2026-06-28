@@ -14,7 +14,11 @@ app.secret_key = "ma_cle_secrete_123"
 
 def get_db():
     db_url = os.environ.get("DATABASE_URL")
-    if db_url:
+    if not db_url:
+        raise Exception("DATABASE_URL non définie!")
+    if not db_url.startswith("postgresql://"):
+        db_url = "postgresql://" + db_url.split("://", 1)[-1]
+    if "?" not in db_url:
         db_url += "?sslmode=require"
     conn = psycopg2.connect(db_url, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
