@@ -1,30 +1,40 @@
 from flask import Flask, render_template, request, redirect, session
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import hashlib
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 import secrets
+import os
+import random
+import string
 
 app = Flask(__name__)
 app.secret_key = "ma_cle_secrete_123"
-import os
-DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "courses.db")
+
+def get_db():
+    conn = psycopg2.connect(os.environ.get("DATABASE_URL"), cursor_factory=psycopg2.extras.RealDictCursor)
+    return conn
+
 def init_db():
     conn = get_db()
-    conn.execute("""CREATE TABLE IF NOT EXISTS utilisateurs (
-        id INTEGER PRIMARY KEY,
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS utilisateurs (
+        id SERIAL PRIMARY KEY,
         pseudo TEXT UNIQUE NOT NULL,
         mot_de_passe TEXT NOT NULL,
+        email TEXT DEFAULT NULL,
+        reset_token TEXT DEFAULT NULL,
         foyer_id INTEGER DEFAULT NULL
     )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS foyers (
-        id INTEGER PRIMARY KEY,
+    cur.execute("""CREATE TABLE IF NOT EXISTS foyers (
+        id SERIAL PRIMARY KEY,
         code TEXT UNIQUE NOT NULL,
         nom TEXT,
         createur_id INTEGER
     )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS courses (
-        id INTEGER PRIMARY KEY,
+    cur.execute("""CREATE TABLE IF NOT EXISTS courses (
+        id SERIAL PRIMARY KEY,
         article TEXT NOT NULL,
         quantite TEXT DEFAULT '1',
         categorie TEXT DEFAULT 'Autre',
@@ -33,50 +43,44 @@ def init_db():
         type_liste TEXT NOT NULL,
         foyer_id INTEGER DEFAULT NULL
     )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS historique (
-        id INTEGER PRIMARY KEY,
+    cur.execute("""CREATE TABLE IF NOT EXISTS historique (
+        id SERIAL PRIMARY KEY,
         article TEXT NOT NULL,
         categorie TEXT,
         quantite TEXT,
         utilisateur_id INTEGER,
         type_liste TEXT,
-        date TEXT DEFAULT CURRENT_TIMESTAMP
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS recettes (
-        id INTEGER PRIMARY KEY,
+    cur.execute("""CREATE TABLE IF NOT EXISTS recettes (
+        id SERIAL PRIMARY KEY,
         nom TEXT NOT NULL,
         utilisateur_id INTEGER
     )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS ingredients (
-        id INTEGER PRIMARY KEY,
+    cur.execute("""CREATE TABLE IF NOT EXISTS ingredients (
+        id SERIAL PRIMARY KEY,
         recette_id INTEGER,
         article TEXT NOT NULL,
         quantite TEXT DEFAULT '1',
         categorie TEXT DEFAULT 'Autre'
     )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS planning (
-        id INTEGER PRIMARY KEY,
+    cur.execute("""CREATE TABLE IF NOT EXISTS planning (
+        id SERIAL PRIMARY KEY,
         jour TEXT NOT NULL,
         repas TEXT NOT NULL,
         recette_id INTEGER,
         utilisateur_id INTEGER
     )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY,
+    cur.execute("""CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
         contenu TEXT NOT NULL,
         utilisateur_id INTEGER,
         pseudo TEXT,
-        date TEXT DEFAULT CURRENT_TIMESTAMP
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
     conn.commit()
+    cur.close()
     conn.close()
-
-
-
-def get_db():
-    conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 init_db()
 
@@ -94,12 +98,14 @@ def inscription():
         mot_de_passe = hashlib.sha256(request.form.get("mot_de_passe").encode()).hexdigest()
         try:
             conn = get_db()
-            conn.execute("INSERT INTO utilisateurs (pseudo, mot_de_passe, email) VALUES (?, ?, ?)", (pseudo, mot_de_passe, email))
+            cur = conn.cursor()
+            cur.execute("INSERT INTO utilisateurs (pseudo, mot_de_passe, email) VALUES (%s, %s, %s)", (pseudo, mot_de_passe, email))
             conn.commit()
+            cur.close()
             conn.close()
             return redirect("/connexion")
         except Exception as e:
-            return render_template("inscription.html", erreur=f"Erreur: {str(e)}")
+            return render_template("inscription.html", erreur="Ce pseudo existe déjà !")
     return render_template("inscription.html")
 
 @app.route("/connexion", methods=["GET", "POST"])
@@ -108,13 +114,16 @@ def connexion():
         pseudo = request.form.get("pseudo")
         mot_de_passe = hashlib.sha256(request.form.get("mot_de_passe").encode()).hexdigest()
         conn = get_db()
-        user = conn.execute("SELECT * FROM utilisateurs WHERE pseudo=? AND mot_de_passe=?", (pseudo, mot_de_passe)).fetchone()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM utilisateurs WHERE pseudo=%s AND mot_de_passe=%s", (pseudo, mot_de_passe))
+        user = cur.fetchone()
+        cur.close()
         conn.close()
         if user:
-          session["utilisateur_id"] = user["id"]
-          session["pseudo"] = user["pseudo"]
-          session["foyer_id"] = user["foyer_id"]
-          return redirect("/")  
+            session["utilisateur_id"] = user["id"]
+            session["pseudo"] = user["pseudo"]
+            session["foyer_id"] = user["foyer_id"]
+            return redirect("/")
         return render_template("connexion.html", erreur="Pseudo ou mot de passe incorrect !")
     return render_template("connexion.html")
 
@@ -128,16 +137,13 @@ def liste(type_liste):
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
+    cur = conn.cursor()
     if type_liste == "personnelle":
-        courses = conn.execute(
-            "SELECT * FROM courses WHERE utilisateur_id=? AND type_liste=? ORDER BY coche ASC, id ASC",
-            (session["utilisateur_id"], "personnelle")
-        ).fetchall()
+        cur.execute("SELECT * FROM courses WHERE utilisateur_id=%s AND type_liste=%s ORDER BY coche ASC, id ASC", (session["utilisateur_id"], "personnelle"))
     else:
-        courses = conn.execute(
-            "SELECT * FROM courses WHERE type_liste=? ORDER BY coche ASC, id ASC",
-            ("commune",)
-        ).fetchall()
+        cur.execute("SELECT * FROM courses WHERE type_liste=%s ORDER BY coche ASC, id ASC", ("commune",))
+    courses = cur.fetchall()
+    cur.close()
     conn.close()
     return render_template("liste.html", courses=courses, type_liste=type_liste)
 
@@ -150,11 +156,10 @@ def ajouter(type_liste):
     categorie = request.form.get("categorie") or "Autre"
     if article:
         conn = get_db()
-        conn.execute(
-            "INSERT INTO courses (article, quantite, categorie, utilisateur_id, type_liste) VALUES (?, ?, ?, ?, ?)",
-            (article, quantite, categorie, session["utilisateur_id"], type_liste)
-        )
+        cur = conn.cursor()
+        cur.execute("INSERT INTO courses (article, quantite, categorie, utilisateur_id, type_liste) VALUES (%s, %s, %s, %s, %s)", (article, quantite, categorie, session["utilisateur_id"], type_liste))
         conn.commit()
+        cur.close()
         conn.close()
     return redirect("/liste/" + type_liste)
 
@@ -164,8 +169,10 @@ def supprimer(type_liste):
         return redirect("/connexion")
     course_id = request.form.get("course_id")
     conn = get_db()
-    conn.execute("DELETE FROM courses WHERE id=?", (course_id,))
+    cur = conn.cursor()
+    cur.execute("DELETE FROM courses WHERE id=%s", (course_id,))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/liste/" + type_liste)
 
@@ -177,8 +184,10 @@ def cocher(type_liste):
     coche = request.form.get("coche")
     nouveau_coche = 0 if coche == "1" else 1
     conn = get_db()
-    conn.execute("UPDATE courses SET coche=? WHERE id=?", (nouveau_coche, course_id))
+    cur = conn.cursor()
+    cur.execute("UPDATE courses SET coche=%s WHERE id=%s", (nouveau_coche, course_id))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/liste/" + type_liste)
 
@@ -190,11 +199,10 @@ def modifier(type_liste):
     quantite = request.form.get("quantite") or "1"
     categorie = request.form.get("categorie") or "Autre"
     conn = get_db()
-    conn.execute(
-        "UPDATE courses SET quantite=?, categorie=? WHERE id=?",
-        (quantite, categorie, course_id)
-    )
+    cur = conn.cursor()
+    cur.execute("UPDATE courses SET quantite=%s, categorie=%s WHERE id=%s", (quantite, categorie, course_id))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/liste/" + type_liste)
 
@@ -203,27 +211,20 @@ def vider(type_liste):
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
+    cur = conn.cursor()
     if type_liste == "personnelle":
-        courses = conn.execute(
-            "SELECT * FROM courses WHERE utilisateur_id=? AND type_liste=?",
-            (session["utilisateur_id"], "personnelle")
-        ).fetchall()
+        cur.execute("SELECT * FROM courses WHERE utilisateur_id=%s AND type_liste=%s", (session["utilisateur_id"], "personnelle"))
     else:
-        courses = conn.execute(
-            "SELECT * FROM courses WHERE type_liste=?",
-            ("commune",)
-        ).fetchall()
+        cur.execute("SELECT * FROM courses WHERE type_liste=%s", ("commune",))
+    courses = cur.fetchall()
     for course in courses:
-        conn.execute(
-            "INSERT INTO historique (article, categorie, quantite, utilisateur_id, type_liste) VALUES (?, ?, ?, ?, ?)",
-            (course["article"], course["categorie"], course["quantite"], session["utilisateur_id"], type_liste)
-        )
+        cur.execute("INSERT INTO historique (article, categorie, quantite, utilisateur_id, type_liste) VALUES (%s, %s, %s, %s, %s)", (course["article"], course["categorie"], course["quantite"], session["utilisateur_id"], type_liste))
     if type_liste == "personnelle":
-        conn.execute("DELETE FROM courses WHERE utilisateur_id=? AND type_liste=?",
-            (session["utilisateur_id"], "personnelle"))
+        cur.execute("DELETE FROM courses WHERE utilisateur_id=%s AND type_liste=%s", (session["utilisateur_id"], "personnelle"))
     else:
-        conn.execute("DELETE FROM courses WHERE type_liste=?", ("commune",))
+        cur.execute("DELETE FROM courses WHERE type_liste=%s", ("commune",))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/liste/" + type_liste)
 
@@ -232,10 +233,10 @@ def historique(type_liste):
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
-    articles = conn.execute(
-        "SELECT DISTINCT article, categorie, quantite FROM historique WHERE utilisateur_id=? AND type_liste=? ORDER BY date DESC LIMIT 50",
-        (session["utilisateur_id"], type_liste)
-    ).fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT article, categorie, quantite FROM historique WHERE utilisateur_id=%s AND type_liste=%s ORDER BY MAX(date) DESC LIMIT 50", (session["utilisateur_id"], type_liste))
+    articles = cur.fetchall()
+    cur.close()
     conn.close()
     return render_template("historique.html", articles=articles, type_liste=type_liste)
 
@@ -244,10 +245,10 @@ def recettes():
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
-    recettes = conn.execute(
-        "SELECT * FROM recettes WHERE utilisateur_id=?",
-        (session["utilisateur_id"],)
-    ).fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM recettes WHERE utilisateur_id=%s", (session["utilisateur_id"],))
+    recettes = cur.fetchall()
+    cur.close()
     conn.close()
     return render_template("recettes.html", recettes=recettes)
 
@@ -258,11 +259,10 @@ def ajouter_recette():
     nom = request.form.get("nom")
     if nom:
         conn = get_db()
-        conn.execute(
-            "INSERT INTO recettes (nom, utilisateur_id) VALUES (?, ?)",
-            (nom, session["utilisateur_id"])
-        )
+        cur = conn.cursor()
+        cur.execute("INSERT INTO recettes (nom, utilisateur_id) VALUES (%s, %s)", (nom, session["utilisateur_id"]))
         conn.commit()
+        cur.close()
         conn.close()
     return redirect("/recettes")
 
@@ -271,8 +271,12 @@ def recette_detail(recette_id):
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
-    recette = conn.execute("SELECT * FROM recettes WHERE id=?", (recette_id,)).fetchone()
-    ingredients = conn.execute("SELECT * FROM ingredients WHERE recette_id=?", (recette_id,)).fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM recettes WHERE id=%s", (recette_id,))
+    recette = cur.fetchone()
+    cur.execute("SELECT * FROM ingredients WHERE recette_id=%s", (recette_id,))
+    ingredients = cur.fetchall()
+    cur.close()
     conn.close()
     return render_template("recette_detail.html", recette=recette, ingredients=ingredients)
 
@@ -284,11 +288,10 @@ def ajouter_ingredient(recette_id):
     quantite = request.form.get("quantite") or "1"
     if article:
         conn = get_db()
-        conn.execute(
-            "INSERT INTO ingredients (recette_id, article, quantite, categorie) VALUES (?, ?, ?, ?)",
-            (recette_id, article, quantite, "Autre")
-        )
+        cur = conn.cursor()
+        cur.execute("INSERT INTO ingredients (recette_id, article, quantite, categorie) VALUES (%s, %s, %s, %s)", (recette_id, article, quantite, "Autre"))
         conn.commit()
+        cur.close()
         conn.close()
     return redirect("/recettes/" + str(recette_id))
 
@@ -298,8 +301,10 @@ def supprimer_ingredient(recette_id):
         return redirect("/connexion")
     ingredient_id = request.form.get("ingredient_id")
     conn = get_db()
-    conn.execute("DELETE FROM ingredients WHERE id=?", (ingredient_id,))
+    cur = conn.cursor()
+    cur.execute("DELETE FROM ingredients WHERE id=%s", (ingredient_id,))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/recettes/" + str(recette_id))
 
@@ -308,9 +313,11 @@ def supprimer_recette(recette_id):
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
-    conn.execute("DELETE FROM ingredients WHERE recette_id=?", (recette_id,))
-    conn.execute("DELETE FROM recettes WHERE id=?", (recette_id,))
+    cur = conn.cursor()
+    cur.execute("DELETE FROM ingredients WHERE recette_id=%s", (recette_id,))
+    cur.execute("DELETE FROM recettes WHERE id=%s", (recette_id,))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/recettes")
 
@@ -321,15 +328,16 @@ def ingredient_vers_liste(recette_id):
     ingredient_id = request.form.get("ingredient_id")
     type_liste = request.form.get("type_liste")
     conn = get_db()
-    ingredient = conn.execute("SELECT * FROM ingredients WHERE id=?", (ingredient_id,)).fetchone()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM ingredients WHERE id=%s", (ingredient_id,))
+    ingredient = cur.fetchone()
     if ingredient:
-        conn.execute(
-            "INSERT INTO courses (article, quantite, categorie, utilisateur_id, type_liste) VALUES (?, ?, ?, ?, ?)",
-            (ingredient["article"], ingredient["quantite"], "Autre", session["utilisateur_id"], type_liste)
-        )
+        cur.execute("INSERT INTO courses (article, quantite, categorie, utilisateur_id, type_liste) VALUES (%s, %s, %s, %s, %s)", (ingredient["article"], ingredient["quantite"], "Autre", session["utilisateur_id"], type_liste))
         conn.commit()
+    cur.close()
     conn.close()
     return redirect("/recettes/" + str(recette_id))
+
 @app.route("/recettes/<int:recette_id>/modifier_ingredient", methods=["POST"])
 def modifier_ingredient(recette_id):
     if "utilisateur_id" not in session:
@@ -337,23 +345,24 @@ def modifier_ingredient(recette_id):
     ingredient_id = request.form.get("ingredient_id")
     quantite = request.form.get("quantite") or "1"
     conn = get_db()
-    conn.execute("UPDATE ingredients SET quantite=? WHERE id=?", (quantite, ingredient_id))
+    cur = conn.cursor()
+    cur.execute("UPDATE ingredients SET quantite=%s WHERE id=%s", (quantite, ingredient_id))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/recettes/" + str(recette_id))
+
 @app.route("/planning")
 def planning():
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
-    recettes = conn.execute(
-        "SELECT * FROM recettes WHERE utilisateur_id=?",
-        (session["utilisateur_id"],)
-    ).fetchall()
-    planning_db = conn.execute(
-        "SELECT * FROM planning WHERE utilisateur_id=?",
-        (session["utilisateur_id"],)
-    ).fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM recettes WHERE utilisateur_id=%s", (session["utilisateur_id"],))
+    recettes = cur.fetchall()
+    cur.execute("SELECT * FROM planning WHERE utilisateur_id=%s", (session["utilisateur_id"],))
+    planning_db = cur.fetchall()
+    cur.close()
     conn.close()
     planning = {p["jour"] + "_" + p["repas"]: p["recette_id"] for p in planning_db}
     return render_template("planning.html", recettes=recettes, planning=planning)
@@ -366,16 +375,12 @@ def sauvegarder_planning():
     repas = request.form.get("repas")
     recette_id = request.form.get("recette_id") or None
     conn = get_db()
-    conn.execute(
-        "DELETE FROM planning WHERE jour=? AND repas=? AND utilisateur_id=?",
-        (jour, repas, session["utilisateur_id"])
-    )
+    cur = conn.cursor()
+    cur.execute("DELETE FROM planning WHERE jour=%s AND repas=%s AND utilisateur_id=%s", (jour, repas, session["utilisateur_id"]))
     if recette_id:
-        conn.execute(
-            "INSERT INTO planning (jour, repas, recette_id, utilisateur_id) VALUES (?, ?, ?, ?)",
-            (jour, repas, recette_id, session["utilisateur_id"])
-        )
+        cur.execute("INSERT INTO planning (jour, repas, recette_id, utilisateur_id) VALUES (%s, %s, %s, %s)", (jour, repas, recette_id, session["utilisateur_id"]))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/planning")
 
@@ -385,18 +390,14 @@ def planning_vers_liste():
         return redirect("/connexion")
     type_liste = request.form.get("type_liste")
     conn = get_db()
-    planning_db = conn.execute(
-        "SELECT * FROM planning WHERE utilisateur_id=?",
-        (session["utilisateur_id"],)
-    ).fetchall()
-    
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM planning WHERE utilisateur_id=%s", (session["utilisateur_id"],))
+    planning_db = cur.fetchall()
     ingredients_cumules = {}
     for p in planning_db:
         if p["recette_id"]:
-            ingredients = conn.execute(
-                "SELECT * FROM ingredients WHERE recette_id=?",
-                (p["recette_id"],)
-            ).fetchall()
+            cur.execute("SELECT * FROM ingredients WHERE recette_id=%s", (p["recette_id"],))
+            ingredients = cur.fetchall()
             for ingredient in ingredients:
                 cle = ingredient["article"].lower()
                 if cle in ingredients_cumules:
@@ -407,32 +408,23 @@ def planning_vers_liste():
                     except:
                         pass
                 else:
-                    ingredients_cumules[cle] = {
-                        "article": ingredient["article"],
-                        "quantite": ingredient["quantite"],
-                        "categorie": ingredient["categorie"]
-                    }
-    
+                    ingredients_cumules[cle] = {"article": ingredient["article"], "quantite": ingredient["quantite"], "categorie": ingredient["categorie"]}
     for ing in ingredients_cumules.values():
-        conn.execute(
-            "INSERT INTO courses (article, quantite, categorie, utilisateur_id, type_liste) VALUES (?, ?, ?, ?, ?)",
-            (ing["article"], ing["quantite"], ing["categorie"], session["utilisateur_id"], type_liste)
-        )
+        cur.execute("INSERT INTO courses (article, quantite, categorie, utilisateur_id, type_liste) VALUES (%s, %s, %s, %s, %s)", (ing["article"], ing["quantite"], ing["categorie"], session["utilisateur_id"], type_liste))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/liste/" + type_liste)
 
-    conn.commit()
-    conn.close()
-    return redirect("/liste/" + type_liste)
 @app.route("/messages")
 def messages():
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
-    messages = conn.execute(
-        "SELECT * FROM messages ORDER BY date ASC"
-    ).fetchall()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM messages ORDER BY date ASC")
+    messages = cur.fetchall()
+    cur.close()
     conn.close()
     return render_template("messages.html", messages=messages, utilisateur_id=session["utilisateur_id"])
 
@@ -443,15 +435,12 @@ def envoyer_message():
     contenu = request.form.get("contenu")
     if contenu:
         conn = get_db()
-        conn.execute(
-            "INSERT INTO messages (contenu, utilisateur_id, pseudo) VALUES (?, ?, ?)",
-            (contenu, session["utilisateur_id"], session["pseudo"])
-        )
+        cur = conn.cursor()
+        cur.execute("INSERT INTO messages (contenu, utilisateur_id, pseudo) VALUES (%s, %s, %s)", (contenu, session["utilisateur_id"], session["pseudo"]))
         conn.commit()
+        cur.close()
         conn.close()
     return redirect("/messages")
-import random
-import string
 
 def generer_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -461,12 +450,17 @@ def foyer():
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
-    user = conn.execute("SELECT * FROM utilisateurs WHERE id=?", (session["utilisateur_id"],)).fetchone()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM utilisateurs WHERE id=%s", (session["utilisateur_id"],))
+    user = cur.fetchone()
     foyer = None
     membres = []
     if user["foyer_id"]:
-        foyer = conn.execute("SELECT * FROM foyers WHERE id=?", (user["foyer_id"],)).fetchone()
-        membres = conn.execute("SELECT * FROM utilisateurs WHERE foyer_id=?", (user["foyer_id"],)).fetchall()
+        cur.execute("SELECT * FROM foyers WHERE id=%s", (user["foyer_id"],))
+        foyer = cur.fetchone()
+        cur.execute("SELECT * FROM utilisateurs WHERE foyer_id=%s", (user["foyer_id"],))
+        membres = cur.fetchall()
+    cur.close()
     conn.close()
     return render_template("foyer.html", foyer=foyer, membres=membres)
 
@@ -476,10 +470,12 @@ def creer_foyer():
         return redirect("/connexion")
     code = generer_code()
     conn = get_db()
-    conn.execute("INSERT INTO foyers (code, createur_id) VALUES (?, ?)", (code, session["utilisateur_id"]))
-    foyer = conn.execute("SELECT * FROM foyers WHERE code=?", (code,)).fetchone()
-    conn.execute("UPDATE utilisateurs SET foyer_id=? WHERE id=?", (foyer["id"], session["utilisateur_id"]))
+    cur = conn.cursor()
+    cur.execute("INSERT INTO foyers (code, createur_id) VALUES (%s, %s) RETURNING id", (code, session["utilisateur_id"]))
+    foyer_id = cur.fetchone()["id"]
+    cur.execute("UPDATE utilisateurs SET foyer_id=%s WHERE id=%s", (foyer_id, session["utilisateur_id"]))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/foyer")
 
@@ -489,12 +485,16 @@ def rejoindre_foyer():
         return redirect("/connexion")
     code = request.form.get("code").upper()
     conn = get_db()
-    foyer = conn.execute("SELECT * FROM foyers WHERE code=?", (code,)).fetchone()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM foyers WHERE code=%s", (code,))
+    foyer = cur.fetchone()
     if foyer:
-        conn.execute("UPDATE utilisateurs SET foyer_id=? WHERE id=?", (foyer["id"], session["utilisateur_id"]))
+        cur.execute("UPDATE utilisateurs SET foyer_id=%s WHERE id=%s", (foyer["id"], session["utilisateur_id"]))
         conn.commit()
+        cur.close()
         conn.close()
         return redirect("/foyer")
+    cur.close()
     conn.close()
     return render_template("foyer.html", foyer=None, membres=[], erreur="Code incorrect — vérifiez et réessayez !")
 
@@ -503,24 +503,29 @@ def quitter_foyer():
     if "utilisateur_id" not in session:
         return redirect("/connexion")
     conn = get_db()
-    conn.execute("UPDATE utilisateurs SET foyer_id=NULL WHERE id=?", (session["utilisateur_id"],))
+    cur = conn.cursor()
+    cur.execute("UPDATE utilisateurs SET foyer_id=NULL WHERE id=%s", (session["utilisateur_id"],))
     conn.commit()
+    cur.close()
     conn.close()
     return redirect("/foyer")
+
 @app.route("/mot_de_passe_oublie", methods=["GET", "POST"])
 def mot_de_passe_oublie():
     if request.method == "POST":
         email = request.form.get("email")
         conn = get_db()
-        user = conn.execute("SELECT * FROM utilisateurs WHERE email=?", (email,)).fetchone()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM utilisateurs WHERE email=%s", (email,))
+        user = cur.fetchone()
         if user:
             token = secrets.token_urlsafe(32)
-            conn.execute("UPDATE utilisateurs SET reset_token=? WHERE email=?", (token, email))
+            cur.execute("UPDATE utilisateurs SET reset_token=%s WHERE email=%s", (token, email))
             conn.commit()
             lien = f"https://listes-courses.onrender.com/reinitialiser/{token}"
             message = Mail(
-               
-                from_email=os.environ.get("SENDGRID_FROM_EMAIL"),                to_emails=email,
+                from_email=os.environ.get("SENDGRID_FROM_EMAIL"),
+                to_emails=email,
                 subject="Réinitialisation de votre mot de passe",
                 html_content=f"<p>Cliquez sur ce lien pour réinitialiser votre mot de passe :</p><a href='{lien}'>{lien}</a>"
             )
@@ -529,8 +534,10 @@ def mot_de_passe_oublie():
                 sg.send(message)
             except Exception as e:
                 print(e)
+            cur.close()
             conn.close()
             return render_template("mot_de_passe_oublie.html", message="Un email vous a été envoyé !")
+        cur.close()
         conn.close()
         return render_template("mot_de_passe_oublie.html", erreur="Aucun compte trouvé avec cet email !")
     return render_template("mot_de_passe_oublie.html")
@@ -538,38 +545,29 @@ def mot_de_passe_oublie():
 @app.route("/reinitialiser/<token>", methods=["GET", "POST"])
 def reinitialiser(token):
     conn = get_db()
-    user = conn.execute("SELECT * FROM utilisateurs WHERE reset_token=?", (token,)).fetchone()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM utilisateurs WHERE reset_token=%s", (token,))
+    user = cur.fetchone()
     if not user:
+        cur.close()
         conn.close()
         return redirect("/connexion")
     if request.method == "POST":
         mot_de_passe = request.form.get("mot_de_passe")
         mot_de_passe2 = request.form.get("mot_de_passe2")
         if mot_de_passe != mot_de_passe2:
+            cur.close()
             conn.close()
             return render_template("nouveau_mot_de_passe.html", erreur="Les mots de passe ne correspondent pas !")
         nouveau_mdp = hashlib.sha256(mot_de_passe.encode()).hexdigest()
-        conn.execute("UPDATE utilisateurs SET mot_de_passe=?, reset_token=NULL WHERE reset_token=?", (nouveau_mdp, token))
+        cur.execute("UPDATE utilisateurs SET mot_de_passe=%s, reset_token=NULL WHERE reset_token=%s", (nouveau_mdp, token))
         conn.commit()
+        cur.close()
         conn.close()
         return redirect("/connexion")
+    cur.close()
     conn.close()
     return render_template("nouveau_mot_de_passe.html")
-@app.route("/reset-db-secret-123")
-def reset_db():
-    conn = get_db()
-    conn.execute("DROP TABLE IF EXISTS utilisateurs")
-    conn.execute("DROP TABLE IF EXISTS courses")
-    conn.execute("DROP TABLE IF EXISTS historique")
-    conn.execute("DROP TABLE IF EXISTS foyers")
-    conn.execute("DROP TABLE IF EXISTS recettes")
-    conn.execute("DROP TABLE IF EXISTS ingredients")
-    conn.execute("DROP TABLE IF EXISTS planning")
-    conn.execute("DROP TABLE IF EXISTS messages")
-    conn.commit()
-    conn.close()
-    init_db()
-    return "Base de données réinitialisée !"
-    
+
 if __name__ == "__main__":
     app.run(debug=True)
