@@ -13,7 +13,7 @@ app = Flask(__name__)
 app.secret_key = "ma_cle_secrete_123"
 
 def get_db():
-    conn = psycopg2.connect(os.environ.get("DATABASE_URL"), cursor_factory=psycopg2.extras.RealDictCursor)
+    conn = psycopg2.connect(os.environ.get("DATABASE_URL") + "?sslmode=require", cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
 def init_db():
