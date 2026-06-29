@@ -22,7 +22,6 @@ LANGUAGES = ['fr', 'en', 'es', 'de', 'pt', 'it']
 def get_locale():
     return request.accept_languages.best_match(LANGUAGES)
 
-def get_db():
 
 def get_db():
     db_url = os.environ.get("DATABASE_URL")
