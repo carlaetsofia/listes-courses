@@ -11,6 +11,18 @@ import string
 
 app = Flask(__name__)
 app.secret_key = "ma_cle_secrete_123"
+app = Flask(__name__)
+app.secret_key = "ma_cle_secrete_123"
+
+from flask_babel import Babel, gettext as _
+babel = Babel(app)
+LANGUAGES = ['fr', 'en', 'es', 'de', 'pt', 'it']
+
+@babel.localeselector
+def get_locale():
+    return request.accept_languages.best_match(LANGUAGES)
+
+def get_db():
 
 def get_db():
     db_url = os.environ.get("DATABASE_URL")

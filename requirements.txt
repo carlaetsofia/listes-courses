@@ -2,3 +2,4 @@ flask
 gunicorn
 sendgrid
 psycopg2-binary
+flask-babel
