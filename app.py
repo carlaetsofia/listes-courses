@@ -18,9 +18,10 @@ from flask_babel import Babel, gettext as _
 babel = Babel(app)
 LANGUAGES = ['fr', 'en', 'es', 'de', 'pt', 'it']
 
-@babel.localeselector
 def get_locale():
     return request.accept_languages.best_match(LANGUAGES)
+
+babel = Babel(app, locale_selector=get_locale)
 
 
 def get_db():
