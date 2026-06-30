@@ -590,6 +590,29 @@ def reinitialiser(token):
 @app.route('/ads.txt')
 def ads_txt():
     return app.send_static_file('ads.txt')
+@app.route("/admin-dashboard-secret")
+def admin_dashboard():
+    if "utilisateur_id" not in session:
+        return redirect("/connexion")
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT pseudo FROM utilisateurs WHERE id=%s", (session["utilisateur_id"],))
+    user = cur.fetchone()
+    if user["pseudo"] != "Carlita":
+        cur.close()
+        conn.close()
+        return redirect("/")
+    cur.execute("SELECT COUNT(*) as total FROM utilisateurs")
+    nb_utilisateurs = cur.fetchone()["total"]
+    cur.execute("SELECT COUNT(*) as total FROM foyers")
+    nb_foyers = cur.fetchone()["total"]
+    cur.execute("SELECT COUNT(*) as total FROM courses")
+    nb_articles = cur.fetchone()["total"]
+    cur.execute("SELECT COUNT(*) as total FROM recettes")
+    nb_recettes = cur.fetchone()["total"]
+    cur.close()
+    conn.close()
+    return render_template("admin.html", nb_utilisateurs=nb_utilisateurs, nb_foyers=nb_foyers, nb_articles=nb_articles, nb_recettes=nb_recettes)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tableau de bord admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 600px; margin: 50px auto; padding: 0 20px; }
+        h1 { color: #2d3748; text-align: center; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; text-align: center; }
+        .stat-number { font-size: 36px; font-weight: bold; color: #48bb78; }
+        .stat-label { color: #888; margin-top: 5px; }
+        .retour { display: block; text-align: center; margin-top: 30px; color: #4299e1; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>📊 Tableau de bord</h1>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number">{{ nb_utilisateurs }}</div>
+            <div class="stat-label">Utilisateurs inscrits</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ nb_foyers }}</div>
+            <div class="stat-label">Foyers créés</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ nb_articles }}</div>
+            <div class="stat-label">Articles ajoutés</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ nb_recettes }}</div>
+            <div class="stat-label">Recettes créées</div>
+        </div>
+    </div>
+
+    <a href="/" class="retour">← Retour à l'accueil</a>
+</body>
+</html>
