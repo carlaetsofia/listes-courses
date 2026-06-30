@@ -613,6 +613,9 @@ def admin_dashboard():
     cur.close()
     conn.close()
     return render_template("admin.html", nb_utilisateurs=nb_utilisateurs, nb_foyers=nb_foyers, nb_articles=nb_articles, nb_recettes=nb_recettes)
+@app.route("/confidentialite")
+def confidentialite():
+    return render_template("confidentialite.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
