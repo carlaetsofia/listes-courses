@@ -639,13 +639,13 @@ def vide_placards():
             response = requests.post(url, json=data)
             result = response.json()
             if "candidates" in result:
-    recette = result["candidates"][0]["content"]["parts"][0]["text"]
-    recette = recette.replace("\n", "<br>")
-else:
-    recette = f"Réponse API: {str(result)}"
-            recette = recette.replace("\n", "<br>")
+                recette = result["candidates"][0]["content"]["parts"][0]["text"]
+                recette = recette.replace("\n", "<br>")
+            else:
+                recette = f"Réponse API: {str(result)}"
         except Exception as e:
             recette = f"Erreur: {str(e)}"
     return render_template("vide_placards.html", recette=recette, ingredients=ingredients)
+    
 if __name__ == "__main__":
     app.run(debug=True)
