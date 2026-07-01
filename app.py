@@ -8,6 +8,8 @@ import secrets
 import os
 import random
 import string
+import requests
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 app = Flask(__name__)
 app.secret_key = "ma_cle_secrete_123"
@@ -617,5 +619,29 @@ def admin_dashboard():
 def confidentialite():
     return render_template("confidentialite.html")
 
+@app.route("/vide-placards", methods=["GET", "POST"])
+def vide_placards():
+    if "utilisateur_id" not in session:
+        return redirect("/connexion")
+    recette = None
+    ingredients = None
+    if request.method == "POST":
+        ingredients = request.form.get("ingredients")
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+            data = {
+                "contents": [{
+                    "parts": [{
+                        "text": f"Je suis une application de courses familiale. Propose-moi UNE recette simple et délicieuse avec ces ingrédients: {ingredients}. Donne le nom de la recette, les ingrédients nécessaires et les étapes de préparation. Réponds en français."
+                    }]
+                }]
+            }
+            response = requests.post(url, json=data)
+            result = response.json()
+            recette = result["candidates"][0]["content"]["parts"][0]["text"]
+            recette = recette.replace("\n", "<br>")
+        except Exception as e:
+            recette = "Désolé, une erreur s'est produite. Veuillez réessayer !"
+    return render_template("vide_placards.html", recette=recette, ingredients=ingredients)
 if __name__ == "__main__":
     app.run(debug=True)
