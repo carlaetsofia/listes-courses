@@ -645,10 +645,8 @@ def vide_placards():
                 recette = f"Réponse API: {str(result)}"
         except Exception as e:
             recette = f"Erreur: {str(e)}"
-        url_list = f"https://generativelanguage.googleapis.com/v1beta/models?key={GEMINI_API_KEY}"
-        response_list = requests.get(url_list)
-        recette = str(response_list.json())
-
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        
     return render_template("vide_placards.html", recette=recette, ingredients=ingredients)
 
 if __name__ == "__main__":
