@@ -628,7 +628,7 @@ def vide_placards():
     if request.method == "POST":
         ingredients = request.form.get("ingredients")
         try:
-           url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
             data = {
                 "contents": [{
                     "parts": [{
