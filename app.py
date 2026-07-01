@@ -641,7 +641,7 @@ def vide_placards():
             recette = result["candidates"][0]["content"]["parts"][0]["text"]
             recette = recette.replace("\n", "<br>")
         except Exception as e:
-            recette = "Désolé, une erreur s'est produite. Veuillez réessayer !"
+            recette = f"Erreur: {str(e)}"
     return render_template("vide_placards.html", recette=recette, ingredients=ingredients)
 if __name__ == "__main__":
     app.run(debug=True)
