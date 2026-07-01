@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vide placards</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; max-width: 600px; margin: 50px auto; padding: 0 20px; }
+        h1 { color: #2d3748; text-align: center; }
+        textarea { width: 100%; padding: 10px; font-size: 16px; border: none; border-radius: 5px; height: 120px; box-sizing: border-box; resize: vertical; }
+        .btn { display: block; width: 100%; padding: 12px; background-color: #48bb78; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        .recette { background: white; border-radius: 10px; padding: 20px; margin-top: 20px; }
+        .recette h2 { color: #2d3748; }
+        .recette p { color: #555; line-height: 1.6; }
+        .retour { display: block; text-align: center; margin-top: 20px; color: #4299e1; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>🧹 Vide placards</h1>
+    <p style="text-align:center; color:#888;">Tapez les ingrédients que vous avez et l'IA vous suggère une recette !</p>
+    <form method="POST">
+        <textarea name="ingredients" placeholder="Ex: pâtes, tomates, oeufs, fromage, oignons..." required>{{ ingredients or '' }}</textarea>
+        <button class="btn" type="submit">🤖 Trouver une recette</button>
+    </form>
+    {% if recette %}
+    <div class="recette">
+        <h2>🍽️ Votre recette :</h2>
+        <p>{{ recette | safe }}</p>
+    </div>
+    {% endif %}
+    <a href="/" class="retour">← Retour à l'accueil</a>
+</body>
+</html>
