@@ -647,5 +647,22 @@ def vide_placards():
             recette = f"Erreur: {str(e)}"
     return render_template("vide_placards.html", recette=recette, ingredients=ingredients)
 
+
+@app.route("/vide-placards/sauvegarder", methods=["POST"])
+def sauvegarder_recette_ia():
+    if "utilisateur_id" not in session:
+        return redirect("/connexion")
+    recette_texte = request.form.get("recette")
+    ingredients = request.form.get("ingredients")
+    nom = f"Recette IA - {ingredients[:30]}..."
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO recettes (nom, utilisateur_id) VALUES (%s, %s) RETURNING id", (nom, session["utilisateur_id"]))
+    recette_id = cur.fetchone()["id"]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(f"/recettes/{recette_id}")
+
 if __name__ == "__main__":
     app.run(debug=True)
