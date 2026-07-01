@@ -628,7 +628,7 @@ def vide_placards():
     if request.method == "POST":
         ingredients = request.form.get("ingredients")
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
             data = {
                 "contents": [{
                     "parts": [{
@@ -645,8 +645,6 @@ def vide_placards():
                 recette = f"Réponse API: {str(result)}"
         except Exception as e:
             recette = f"Erreur: {str(e)}"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-        
     return render_template("vide_placards.html", recette=recette, ingredients=ingredients)
 
 if __name__ == "__main__":
