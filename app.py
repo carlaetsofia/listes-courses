@@ -638,7 +638,11 @@ def vide_placards():
             }
             response = requests.post(url, json=data)
             result = response.json()
-            recette = result["candidates"][0]["content"]["parts"][0]["text"]
+            if "candidates" in result:
+    recette = result["candidates"][0]["content"]["parts"][0]["text"]
+    recette = recette.replace("\n", "<br>")
+else:
+    recette = f"Réponse API: {str(result)}"
             recette = recette.replace("\n", "<br>")
         except Exception as e:
             recette = f"Erreur: {str(e)}"
